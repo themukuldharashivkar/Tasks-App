@@ -1,17 +1,16 @@
 "use client";
 import { Eye, RotateCcw, Settings } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
+import SettingsChanger from "./SettingsChanger";
+import SettingsComponent from "./Settings";
 
 export default function Timer() {
   const [time, setTime] = useState(25 * 60);
   const [running, setRunning] = useState(false);
-  const totalTime = 25 * 60;
+  const [activeComponent, setActiveComponent] = useState("Timer");
+  const [currentSettings, setCurrentSettings] = useState(null);
 
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
+  const totalTime = 25 * 60;
 
   // Timer logic
   useEffect(() => {
@@ -26,11 +25,43 @@ export default function Timer() {
     return () => clearInterval(timer);
   }, [running, time]);
 
-  // Calculate progress
   const progress = ((totalTime - time) / totalTime) * 100;
 
+  const Wrapper = ({ children }) => (
+    <div className="relative flex flex-col items-center justify-center bg-dark text-white rounded-3xl shadow-lg max-w-sm h-[28rem]">
+      {children}
+    </div>
+  );
+
+  const handleSettingsChange = (setting) => {
+    setCurrentSettings(setting);
+    setActiveComponent("SettingsChanger");
+  };
+
+  if (activeComponent === "Settings") {
+    return (
+      <Wrapper>
+        <SettingsComponent
+          onBack={() => setActiveComponent("Timer")}
+          onSettingSelect={handleSettingsChange}
+        />
+      </Wrapper>
+    );
+  }
+
+  if (activeComponent === "SettingsChanger") {
+    return (
+      <Wrapper>
+        <SettingsChanger
+          setting={currentSettings}
+          onBack={() => setActiveComponent("Settings")}
+        />
+      </Wrapper>
+    );
+  }
+
   return (
-    <div className="bg-dark text-white rounded-3xl max-w-sm shadow-lg p-8">
+    <Wrapper>
       <div className="mt-6 relative flex items-center justify-center">
         <svg
           className="absolute w-72 h-72"
@@ -40,7 +71,7 @@ export default function Timer() {
           <circle
             cx="50"
             cy="50"
-            r="45"
+            r="40"
             stroke="rgba(255, 255, 255, 0.2)"
             strokeWidth="10"
             fill="none"
@@ -48,11 +79,11 @@ export default function Timer() {
           <circle
             cx="50"
             cy="50"
-            r="45"
+            r="40"
             stroke="url(#gradient)"
             strokeWidth="10"
             fill="none"
-            strokeDasharray="282.6" /* Circumference of the circle */
+            strokeDasharray="282.6"
             strokeDashoffset={`${282.6 - (progress / 100) * 282.6}`}
             strokeLinecap="round"
             style={{
@@ -61,7 +92,6 @@ export default function Timer() {
               transition: "stroke-dashoffset 0.3s ease",
             }}
           />
-
           <defs>
             <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stopColor="#ff5a5f" />
@@ -69,21 +99,10 @@ export default function Timer() {
             </linearGradient>
           </defs>
         </svg>
-
-        <div className="bg-dark w-64 h-64 rounded-full flex flex-col items-center justify-center space-y-3">
-          <Eye />
-          <h2 className="text-5xl font-bold">{formatTime(time)}</h2>
-          <div className="flex space-x-3">
-            <div className="w-1 h-4 bg-[#ff2d2d] rounded-full" />
-            <div className="w-1 h-4 bg-[#ff2d2d] rounded-full" />
-            <div className="w-1 h-4 bg-neutral-500 rounded-full" />
-            <div className="w-1 h-4 bg-neutral-500 rounded-full" />
-          </div>
-          <h3 className="text-neutral-500">FOCUS</h3>
-        </div>
+        <Clock time={time} />
       </div>
 
-      <div className="pt-10 flex justify-around">
+      <div className="pt-6 w-full flex justify-around">
         <button
           onClick={() => {
             setTime(totalTime);
@@ -99,10 +118,36 @@ export default function Timer() {
         >
           {running ? "Pause" : "Start"}
         </button>
-        <button className="border border-neutral-700 rounded-full p-3 flex-shrink-0 hover:border-[#ff2d2d] transition-all duration-200">
+        <button
+          onClick={() => setActiveComponent("Settings")}
+          className="border border-neutral-700 rounded-full p-3 flex-shrink-0 hover:border-[#ff2d2d] transition-all duration-200"
+        >
           <Settings />
         </button>
       </div>
-    </div>
+    </Wrapper>
   );
 }
+
+// Clock Component (memoized to prevent unnecessary rerenders)
+const Clock = memo(({ time }) => {
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="bg-dark w-64 h-64 rounded-full flex flex-col items-center justify-center space-y-3">
+      <Eye />
+      <h2 className="text-5xl font-bold">{formatTime(time)}</h2>
+      <div className="flex space-x-3">
+        <div className="w-1 h-4 bg-[#ff2d2d] rounded-full" />
+        <div className="w-1 h-4 bg-[#ff2d2d] rounded-full" />
+        <div className="w-1 h-4 bg-neutral-500 rounded-full" />
+        <div className="w-1 h-4 bg-neutral-500 rounded-full" />
+      </div>
+      <h3 className="text-neutral-500">FOCUS</h3>
+    </div>
+  );
+});
